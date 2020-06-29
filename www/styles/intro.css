@@ -1,0 +1,27 @@
+
+body {
+    margin: 0;
+    overflow: auto
+    color: black;
+    text-align: center;
+}
+
+h1 {
+    position: absolute;
+    width: 100%;
+    z-index: 1;
+    font-size: 1.5rem;
+}
+
+p {
+    width: 100%;
+    font-size: 1.5rem
+}
+
+a:link{
+    color: #990000;
+    text-decoration: none;
+}
+a:hover{
+    text-decoration: underline;
+}

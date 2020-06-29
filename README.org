@@ -1,0 +1,76 @@
+DISCLAIMER: This repository hosts the code that was developed as part of my master thesis. It needs refactoring, so, for now, it only serves as a demo. This README only provides local setup instructions. My thesis (in Greek) can be found [[][]] .
+
+
+* Local setup
+
+
+** Requirements
+
+ - Linux OS (because it has not been tested in other OSes)
+ - Clozure Common Lisp
+ - Browser supporting WebGL
+
+
+** Steps
+
+*** 1. Install the required Common Lisp libraries
+
+These libraries are:
+
+1. [[https://github.com/edicl/hunchentoot][Hunchentoot web server]]
+2. [[https://github.com/phmarek/yason][Yason JSON library]]
+3. [[https://github.com/bendudson/array-operations][Array-operations library]]
+
+
+You can install these libraries manually or using a library manager like [[https://www.quicklisp.org][Quicklisp]] . Just make sure that your Common Lisp libraries are in a directory that [[https://github.com/fare/asdf][ASDF]] can find.
+
+
+*** 2. Clone this repo
+
+Also, make sure that this repo is cloned in a directory ASDF [[https://common-lisp.net/project/asdf/asdf.html#Configuring-ASDF-to-find-your-systems][can find]] . In the commands below, it is assumed that you cloned this repo in ~$HOME/common-lisp~ .
+
+
+*** 3. Run Lisp
+
+Supposing that ~ccl~ starts your Clozure Common Lisp:
+
+
+#+BEGIN_SRC
+
+$ ccl
+
+#+END_SRC
+
+
+Then inside the Lisp REPL issue the following commands (~?~ stands for the REPL prompt):
+
+
+#+BEGIN_SRC
+
+? (require 'asdf)
+
+? (asdf:load-system "kon")
+
+? (in-package :kon)
+
+? (set-server "~/common-lisp/kon/www/" 8080)
+
+#+END_SRC
+
+Now, open your browser at http://localhost:8080
+
+To stop the server, you can either issue in REPL:
+
+#+BEGIN_SRC
+
+? (stop-server)
+
+#+END_SRC
+
+or you can quit Lisp, which is set to also stop the web server:
+
+#+BEGIN_SRC
+
+? (ccl:quit)
+
+#+END_SRC
