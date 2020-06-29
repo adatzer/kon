@@ -1,4 +1,4 @@
-DISCLAIMER: This repository hosts the code that was developed as part of my master thesis. It needs refactoring, so, for now, it only serves as a demo. This README only provides local setup instructions. My thesis (in Greek) can be found [[][]] .
+DISCLAIMER: This repository hosts the code that was developed as part of my master thesis. It needs refactoring, so, for now, it only serves as a demo. This README only provides local setup instructions. My thesis (in Greek) can be found [[https://atzereme-icsd.s3.eu-central-1.amazonaws.com/diplomatiki-ergasia.pdf][here]] .
 
 
 * Local setup
@@ -7,8 +7,8 @@ DISCLAIMER: This repository hosts the code that was developed as part of my mast
 ** Requirements
 
  - Linux OS (because it has not been tested in other OSes)
- - Clozure Common Lisp
- - Browser supporting WebGL
+ - [[https://ccl.clozure.com][Clozure Common Lisp]]
+ - Browser supporting [[https://khronos.org/webgl/][WebGL]]
 
 
 ** Steps
