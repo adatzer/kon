@@ -101,21 +101,21 @@
 
 ;; FILES
 (defparameter *rand-text*
-  (file2string "/home/ada/common-lisp/ada/kon/data/a.txt"))
+  (file2string (uiop:merge-pathnames* #P"data/a.txt" (uiop:getcwd))))
 (defparameter *austen-text*
-  (file2string "/home/ada/common-lisp/ada/kon/data/austen-sense.txt"))
+  (file2string (uiop:merge-pathnames* #P"data/austen-sense.txt" (uiop:getcwd))))
 (defparameter *hume-text*
-  (file2string "/home/ada/common-lisp/ada/kon/data/hume-enquiry.txt"))
+  (file2string (uiop:merge-pathnames* #P"data/hume-enquiry.txt" (uiop:getcwd))))
 (defparameter *milton-text*
-  (file2string "/home/ada/common-lisp/ada/kon/data/milton-paradise.txt"))
+  (file2string (uiop:merge-pathnames* #P"data/milton-paradise.txt" (uiop:getcwd))))
 (defparameter *nietz-text*
-  (file2string "/home/ada/common-lisp/ada/kon/data/nietzsche.txt"))
+  (file2string (uiop:merge-pathnames* #P"data/nietzsche.txt" (uiop:getcwd))))
 (defparameter *whit-text*
-  (file2string "/home/ada/common-lisp/ada/kon/data/whitman-leaves.txt"))
+  (file2string (uiop:merge-pathnames* #P"data/whitman-leaves.txt" (uiop:getcwd))))
 (defparameter *poems-eng*
-  (file2string "/home/ada/common-lisp/ada/kon/data/poems-eng.txt"))
+  (file2string (uiop:merge-pathnames* #P"data/poems-eng.txt" (uiop:getcwd))))
 (defparameter *poems-gr*
-  (file2string "/home/ada/common-lisp/ada/kon/data/poems-gr.txt"))
+  (file2string (uiop:merge-pathnames* #P"data/poems-gr.txt" (uiop:getcwd))))
 
 
 ;; TXTs --no-space --no-words
