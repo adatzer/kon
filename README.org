@@ -1,4 +1,4 @@
-DISCLAIMER: This repository hosts the code that was developed as part of my master thesis. It needs refactoring, so, for now, it only serves as a demo. This README only provides local setup instructions. My thesis (in Greek) can be found [[https://atzereme-icsd.s3.eu-central-1.amazonaws.com/diplomatiki-ergasia.pdf][here]] .
+DISCLAIMER: This repository hosts the code that was developed as part of my master thesis. It needs refactoring, so, for now, it only serves as a demo. This README only provides local setup instructions.
 
 
 * Local setup
