@@ -4,8 +4,6 @@
 
 //                  (three.js - r.111  - 09 Dec 2019)
 
-// const URLS = [ "/demohume", "/demomilton" ];  // ***
-
 
 
 const myfun = (urlarr, siz, ad) => {
