@@ -7,10 +7,10 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1">
     <meta charset="UTF-8">
-    <script src="js/three.min.js"></script>
-    <script src="js/TrackballControls.js"></script>
-    <script src="js/stats.min.js"></script>
-    <script src="js/jsr.js"></script>
+    <!-- <script src="js/three.min.js"></script> -->
+    <!-- <script src="js/TrackballControls.js"></script> -->
+    <!-- <script src="js/stats.min.js"></script> -->
+
     <link type="text/css"
           rel="stylesheet"
           href="styles/main.css">
@@ -144,10 +144,13 @@
 
     </script>
 
-    <script src="js/appdemo.js"></script> <!-- *** -->
+    <script src="js/jsr.js"></script>
+
     <script id="main" type="text/javascript">
 
-      myfun(["/demohume", "/demomilton"], 1.0, 0.1);
+        import { myfun } from './js/appdemo.js';
+
+        myfun(["/demohume", "/demomilton"], 1.0, 0.1);
 
     </script>
 

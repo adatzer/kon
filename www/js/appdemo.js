@@ -875,3 +875,5 @@ const myfun = (urlarr, siz, ad) => {
     };
 
 };
+
+export { myfun };
