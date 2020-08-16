@@ -1,55 +1,58 @@
 // *** or ** means the length of these arrays MUST be set carefully
-//     and depends on the specifics of the app
 
+//                  (three.js - r.118)
 
-//                  (three.js - r.111  - 09 Dec 2019)
+// imports
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.118.3/build/three.module.js";
+import { TrackballControls } from "https://cdn.jsdelivr.net/npm/three@0.118.3/examples/jsm/controls/TrackballControls.js";
+import Stats from "https://cdn.jsdelivr.net/npm/three@0.118.3/examples/jsm/libs/stats.module.js";
 
-
-
+// fun
 const myfun = (urlarr, siz, ad) => {
 
-    var data = [];
-    var results = [];
-    var meta;
-    var num;
+    let data = [];
+    let results = [];
+    let meta;
+    let num;
 
-    var container, renderer, scene;
-    var picData = [], picScene, picRT, mouse;
-    var cameraA;
-    var camerasB = [];
-    var controlsA, controlsB, stats, ptStats;
-    var pointsOnScreen = 0;
+    let container, renderer, scene;
+    let picData = [], picScene, picRT, mouse;
+    let cameraA;
+    let camerasB = [];
+    let controlsA, controlsB, stats, ptStats;
+    let pointsOnScreen = 0;
 
-    var geometries = [], picGeometries = [];
-    var myMaterial, myPicMaterial;
-    var particles = [], picParticles = [];
-    var cloud, picCloud, initCloudQuaternion;
+    let geometries = [], picGeometries = [];
+    let myMaterial, myPicMaterial;
+    let particles = [], picParticles = [];
+    let cloud, picCloud, initCloudQuaternion;
     const dROT = 0.0005;
-    var dRotCloud = dROT;
-    var rId = 0, rData, picPrint = "-";
+    let dRotCloud = dROT;
+    let rId = 0, rData, picPrint = "-";
 
-
-    // var colors = [ 0xff1111, 0x1111ff ];  // **
-    var timer = 0;
+    let timer = 0;
     const duration = 360;
-    var currCoordSys = 0; // 0:Kartesian, 1:Cylindrical, 2:Spherical
-    var prevCoordSys = 0;
-    var coordSys = [ 1.0, 0.0, 0.0 ];
+    const coordinateSystems = [ "Cartesian", "Cylindrical", "Spherical" ];
+    let currCoordSys = 0; // 0:Kartesian, 1:Cylindrical, 2:Spherical
+    let prevCoordSys = 0;
+    let coordSys = [ 1.0, 0.0, 0.0 ];
     const SIZE = siz;
 
-    var nMaxs = [ 0, 0 ];  //**
-    var syncFrom = [ 0, 0 ];    //**
-    var syncTo = [ 100, 100 ];  //**
-    var asyncFrom = [ 0, 0 ];   //**
-    var asyncTo = [ 100, 100 ]; //**
-    var currFrom, currTo, start, count;
+    let nMaxs = [ 0, 0 ];  //**
+    let syncFrom = [ 0, 0 ];    //**
+    let syncTo = [ 100, 100 ];  //**
+    let asyncFrom = [ 0, 0 ];   //**
+    let asyncTo = [ 100, 100 ]; //**
+    let currFrom, currTo, start, count;
 
-    var flagPause = false;
-    var flagFullScreen = true;
-    var flagGrid = false;
-    var flagSync = true;
-    var flagAsync = false;
-    var flagPic = false;
+    let flagPause = false;
+    let flagFullScreen = true;
+    let flagGrid = false;
+    let flagSync = true;
+    let flagAsync = false;
+    let flagPic = false;
+
+    let beginTime = Date.now(), prevTime = beginTime, frames = 0, fps = 0; // for FPS calc
 
     const loadin = document.querySelector( '#loadin' );
     const info = document.querySelector( '#info' );
@@ -75,16 +78,16 @@ const myfun = (urlarr, siz, ad) => {
 
     // // AJAX
     async function doAjaxThings( urls ) {
-        var l = urls.length;
+        let l = urls.length;
         for ( let u = 0; u < l; u++ ) {
-            var result = await makeRequest( "GET", urls[u] );
+            let result = await makeRequest( "GET", urls[u] );
             results.push( result );
         }
 
         // // when data finishes loading
-        var rl = results.length;
-        for ( var r = 0; r < rl; r++ ) {
-            var dat = JSON.parse( results[r] );
+        let rl = results.length;
+        for ( let r = 0; r < rl; r++ ) {
+            let dat = JSON.parse( results[r] );
             data.push( dat );
         }
 
@@ -99,7 +102,7 @@ const myfun = (urlarr, siz, ad) => {
     function makeRequest( method, url ) {
         return new Promise(( resolve, reject ) => {
             const xhr = new XMLHttpRequest();
-            var byCache = ((/\?/).test(url) ? "&" : "?") + (new Date()).getTime();
+            let byCache = ((/\?/).test(url) ? "&" : "?") + (new Date()).getTime();
             xhr.open( method, url + byCache, true );
             xhr.onload = () => resolve( xhr.response );
             xhr.onerror = () => reject( xhr.statusText );
@@ -162,17 +165,17 @@ const myfun = (urlarr, siz, ad) => {
         cameraA.position.set( 0.5, 0.5, 5 );
 
         // // must num < 32 (three.js doc on layers) ***
-        for ( var lay = 0; lay < num; lay++ ) {
+        for ( let lay = 0; lay < num; lay++ ) {
             cameraA.layers.enable( lay );
         }
 
         for ( let c = 0; c < ( num + 1 ); c++ ) {
-            var camera = new THREE.PerspectiveCamera( fov, aspect, near, far );
+            let camera = new THREE.PerspectiveCamera( fov, aspect, near, far );
             camera.position.set( 0.5, 0.5, 5 );
             camerasB.push( camera );
         }
 
-        for ( var lay = 0; lay < num; lay++ ) {
+        for ( let lay = 0; lay < num; lay++ ) {
             camerasB[0].layers.enable( lay );
         }
 
@@ -193,7 +196,7 @@ const myfun = (urlarr, siz, ad) => {
         // //   0, 1, 0 ], which is a permutation of the Identity.
         // // Its rows and columns match the RGB values of Red, Blue, Green
 
-        var myMatrix = new THREE.Matrix4();
+        let myMatrix = new THREE.Matrix4();
         myMatrix.set( 1.0,  ad,  ad, 1.0,
                        ad,  ad, 1.0, 1.0,
                        ad, 1.0,  ad, 1.0,
@@ -201,7 +204,7 @@ const myfun = (urlarr, siz, ad) => {
 
         cloud = new THREE.Group();
         picCloud = new THREE.Group();
-        var ip = 0;
+        let ip = 0;
         picData[0] = {
             belongs: -1,
             localIndex: -1,
@@ -209,16 +212,16 @@ const myfun = (urlarr, siz, ad) => {
 
         // // geometries ...vertices in the range [0,1]
         for (let g = 0; g < num; g++ ) {
-            var cloudSize = data[g].length;
+            let cloudSize = data[g].length;
 
-            var positions = [];
-            // var sizes = [];
-            var defColors = [];
-            var picColors = [];
-            var colorP = new THREE.Color();
+            let positions = [];
+            // let sizes = [];
+            let defColors = [];
+            let picColors = [];
+            let colorP = new THREE.Color();
 
-            var vertex = new THREE.Vector3();
-            var colorV = new THREE.Vector3();
+            let vertex = new THREE.Vector3();
+            let colorV = new THREE.Vector3();
 
             for ( let i = 0; i < cloudSize; i++ ) {
                 vertex.x = data[g][i][0];
@@ -239,33 +242,33 @@ const myfun = (urlarr, siz, ad) => {
                 };
                 ip++;
             }
-            var geometry = new THREE.BufferGeometry();
+            let geometry = new THREE.BufferGeometry();
 
             // // the typed BufferAttributes like Float32BufferAttribute are
             // // just a wrapper around BufferAttributes that also do
             // // normalization on the arrays, i.e. BEWARE on what you pass to them!
 
-            var positionAttr = new THREE.Float32BufferAttribute( positions, 3 );
+            let positionAttr = new THREE.Float32BufferAttribute( positions, 3 );
             geometry.setAttribute( 'position', positionAttr );
 
-            var colorParamAttr = new THREE.Float32BufferAttribute( defColors, 3 );
+            let colorParamAttr = new THREE.Float32BufferAttribute( defColors, 3 );
             geometry.setAttribute( 'color', colorParamAttr );
 
-            // var sizeAttr = new THREE.Float32BufferAttribute( sizes, 1 );
+            // let sizeAttr = new THREE.Float32BufferAttribute( sizes, 1 );
             // geometry.setAttribute( 'size', sizeAttr );
 
-            var pColor = new THREE.Float32BufferAttribute( picColors, 3 );
+            let pColor = new THREE.Float32BufferAttribute( picColors, 3 );
             geometry.setAttribute( 'pic', pColor );
 
             geometries.push( geometry );
 
-            var pGeometry = geometry.clone();
+            let pGeometry = geometry.clone();
             picGeometries.push( pGeometry );
         }
 
         // // material
-        var vert = document.getElementById( 'vShader' ).textContent;
-        var frag = document.getElementById( 'fShader' ).textContent;
+        let vert = document.getElementById( 'vShader' ).textContent;
+        let frag = document.getElementById( 'fShader' ).textContent;
 
         myMaterial = new THREE.RawShaderMaterial( {
             uniforms: {
@@ -313,9 +316,9 @@ const myfun = (urlarr, siz, ad) => {
         }
 
         // // Box helper
-        var boxG = new THREE.BoxBufferGeometry( 2, 2, 2 );
-        var edges = new THREE.EdgesGeometry( boxG );
-        var line = new THREE.LineSegments( edges );
+        let boxG = new THREE.BoxBufferGeometry( 2, 2, 2 );
+        let edges = new THREE.EdgesGeometry( boxG );
+        let line = new THREE.LineSegments( edges );
         line.material.depthTest = false;
         line.material.opacity = 0.25;
         line.material.transparent = true;
@@ -324,7 +327,7 @@ const myfun = (urlarr, siz, ad) => {
         cloud.add( line );
 
         // // axes helper
-        var axesHelperA = new THREE.AxesHelper( 100 );
+        let axesHelperA = new THREE.AxesHelper( 100 );
         axesHelperA.layers.enableAll();
         cloud.add( axesHelperA );
 
@@ -360,7 +363,7 @@ const myfun = (urlarr, siz, ad) => {
     }
 
     function createRT() {
-        var options = {
+        let options = {
             format: THREE.RGBAFormat,
             type: THREE.UnsignedByteType,
             anisotropy: 1,
@@ -463,8 +466,8 @@ const myfun = (urlarr, siz, ad) => {
             // }
 
             // if ( num === 2 ) {
-            var sliX = container.clientWidth / 2;
-            var sliY = container.clientHeight / 2;
+            let sliX = container.clientWidth / 2;
+            let sliY = container.clientHeight / 2;
 
             renderer.setViewport( sliX / 2, 0, sliX, sliY );
             renderer.render( scene, camerasB[0] );
@@ -515,7 +518,7 @@ const myfun = (urlarr, siz, ad) => {
         cameraA.updateProjectionMatrix();
 
         // // create buffer and read the pixel
-        var pixelBuffer = new Uint8Array( 4 );
+        let pixelBuffer = new Uint8Array( 4 );
         renderer.readRenderTargetPixels(
             picRT,
             0,
@@ -651,7 +654,7 @@ const myfun = (urlarr, siz, ad) => {
     }
 
     function onKeyUp(e) {
-        var ec = e.code;
+        let ec = e.code;
 
         if ( ec === 'Space' ) {
             pause();
@@ -665,7 +668,7 @@ const myfun = (urlarr, siz, ad) => {
     }
 
     function onKeyDown(e) {
-        var ec = e.code;
+        let ec = e.code;
 
         if ( flagFullScreen ) {
 
@@ -797,31 +800,31 @@ const myfun = (urlarr, siz, ad) => {
         } );
     }
 
-    var ADAx = ADAx || {}
+    let ADAx = ADAx || {};
 
     ADAx.Appendix = function() {
 
-        var appendixContainer = document.createElement( 'div' );
+        let appendixContainer = document.createElement( 'div' );
         appendixContainer.style.cssText = 'width:auto;opacity:0.7;cursor:default';
 
-        var apxDiv = document.createElement( 'div' );
+        let apxDiv = document.createElement( 'div' );
         apxDiv.style.cssText = 'padding:0 0 0 0;text-align:left;background:transparent;';
         appendixContainer.appendChild( apxDiv );
 
-        var apxTextA = document.createElement( 'div' );
+        let apxTextA = document.createElement( 'div' );
         apxTextA.style.cssText = 'color:#f00;font-family:monospace,sans-serif;font-size:1vmin;font-weight:bold;line-height:1.1vmin';
         apxTextA.innerHTML = '';
         apxDiv.appendChild( apxTextA );
 
-        var apxTextsA = [];
-        var nLines = 7;  //**
-        for( var i = 0; i < nLines; i++ ){
+        let apxTextsA = [];
+        let nLines = 7;  //**
+        for( let i = 0; i < nLines; i++ ){
 	    apxTextsA[i] = document.createElement( 'div' );
 	    apxTextsA[i].style.cssText = 'color:#006699;background:transparent;font-family:sans-serif;font-size:1.2vmin;font-weight:normal;line-height:1.3vmin;white-space:nowrap;';
 	    apxDiv.appendChild( apxTextsA[i] );
 	    apxTextsA[i].innerHTML = '-';
         }
-        var i = 0;
+        let i = 0;
         apxTextsA[i++].textContent = "====== Controls ======";
         apxTextsA[i++].textContent = "A + LeftMouse: Orbiting";
         apxTextsA[i++].textContent = "S + LeftMouse: Zooming";
@@ -829,27 +832,24 @@ const myfun = (urlarr, siz, ad) => {
         apxTextsA[i++].textContent = "=== FullScreen ONLY ======";
         apxTextsA[i++].textContent = "Shift + 1 / 1: Hide/Show Red";
         apxTextsA[i++].textContent = "Shift + 2 / 2: Hide/Show Blue";
-        // apxTextsA[i++].textContent = "\xa0\xa0\xa0\xa0\xa0\xa0Hide/Show Red";
-
-        // apxTextsA[i++].textContent = "\xa0\xa0\xa0\xa0\xa0\xa0Hide/Show Blue";
 
         return {
 	    domElement: appendixContainer,
-	}
+	};
     };
 
     ADAx.PointStats = function() {
 
-        var pointStatsContainer = document.createElement( 'div' );
+        let pointStatsContainer = document.createElement( 'div' );
         pointStatsContainer.style.cssText = 'width:100%;opacity:0.9;cursor:default';
 
-        var psDiv = document.createElement( 'div' );
+        let psDiv = document.createElement( 'div' );
         psDiv.style.cssText = 'text-align:center;';
         pointStatsContainer.appendChild( psDiv );
 
-        var psTexts	= [];
-        var nLines = 2;
-        for ( var i = 0; i < nLines; i++ ) {
+        let psTexts	= [];
+        let nLines = 2;
+        for ( let i = 0; i < nLines; i++ ) {
 	    psTexts[i] = document.createElement( 'div' );
 	    psTexts[i].style.cssText = 'color:#0099ff;background:transparent;font-family:monospace;font-size:9px;font-weight:bold;line-height:15px';
 	    psDiv.appendChild( psTexts[i] );
@@ -857,7 +857,7 @@ const myfun = (urlarr, siz, ad) => {
         }
 
 
-        var lastTime = Date.now();
+        let lastTime = Date.now();
         return {
 	    domElement: pointStatsContainer,
 
@@ -865,13 +865,13 @@ const myfun = (urlarr, siz, ad) => {
 
 	        // refresh only 30time per second
 	        if ( Date.now() - lastTime < 1000/30 ) return;
-	        lastTime = Date.now()
+	        lastTime = Date.now();
 
-	        var i = 0;
+	        let i = 0;
 	        psTexts[i++].textContent = "Points: " + pointsOnScreen;
                 psTexts[i++].textContent = picPrint;
 	    }
-        }
+        };
     };
 
 };

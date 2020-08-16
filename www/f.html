@@ -74,7 +74,7 @@
       uniform mat4 projectionMatrix;
 
       attribute vec3 position;
-      attribute float size;
+
 
 #ifdef PICKING
       attribute vec3 pic;
@@ -85,6 +85,7 @@
       uniform float uK;
       uniform float uC;
       uniform float uS;
+      uniform float uSize;
 
       varying vec3 vColor;
 
@@ -102,6 +103,7 @@
           float k = uK;
           float c = uC;
           float s = uS;
+          float siz = uSize;
 
           vec3 pos = vec3(position);
 
@@ -119,7 +121,7 @@
 
           vec3 finpos = k * kpos + c * cpos + s * spos;
 
-          gl_PointSize = size * 1.0;
+          gl_PointSize = siz * 1.0;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(finpos, 1.0);
 
       }
