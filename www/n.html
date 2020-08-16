@@ -1,157 +1,210 @@
-
 <!DOCTYPE html>
 <html>
 
-  <head>
-    <title></title>
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1">
-    <meta charset="UTF-8">
-    <script src="js/three.min.js"></script>
-    <script src="js/TrackballControls.js"></script>
-    <script src="js/stats.min.js"></script>
-    <script src="js/jsr.js"></script>
-    <link type="text/css"
-          rel="stylesheet"
-          href="styles/main.css">
-  </head>
+    <head>
 
-  <body>
-    <div id="scene-container">
-    </div>
+        <title>konN</title>
+        <meta name="viewport"
+              content="width=device-width, initial-scale=1">
+        <meta charset="UTF-8">
 
-    <div id="loadin">. . . L O A D I N G . . .</div>
-    <div id="info"></div>
+        <link type="text/css"
+              rel="stylesheet"
+              href="styles/main.css">
 
-    <div id="ranges-area"><!-- ** -->
-      <div id="sync-range">
-        <input id="sync-from" type="range" min="0" max="100" value="0">
-        <input id="sync-to"   type="range" min="0" max="100" value="100">
-      </div>
+    </head>
 
-      <div id="async-range">
-        <div id="red-range">
-          <input id="red-from"  type="range" min="0" max="100" value="0">
-          <input id="red-to"    type="range" min="0" max="100" value="100">
+    <body>
+
+        <!-- ---------------------------------------------------------- -->
+        <!-- Snowplow starts plowing -->
+        <script type="text/javascript">
+
+            ;(function(p,l,o,w,i,n,g){if(!p[i]){p.GlobalSnowplowNamespace=p.GlobalSnowplowNamespace||[];
+            p.GlobalSnowplowNamespace.push(i);p[i]=function(){(p[i].q=p[i].q||[]).push(arguments)
+            };p[i].q=p[i].q||[];n=l.createElement(o);g=l.getElementsByTagName(o)[0];n.async=1;
+            n.src=w;g.parentNode.insertBefore(n,g)}}(window,document,"script","js/sp.js","snowp_in_fun"));
+
+            // for Snowplow
+            window.snowp_in_fun( 'newTracker', 'sp', '{COLL URI}', {
+
+                appId: 'kon',
+                platform: 'web',
+                discoverRootDomain: true,
+                eventMethod: "beacon",
+                contexts: {
+                    webPage: true,
+                    performanceTiming: true
+                }
+
+            } );
+
+            // for Snowplow Micro
+            window.snowp_in_fun( 'newTracker', 'spmicro', 'localhost:9091', {
+
+                encodeBase64: false,
+                appId: 'kon',
+                platform: 'web',
+                discoverRootDomain: true,
+                eventMethod: "beacon",
+                contexts: {
+                    webPage: true,
+                    performanceTiming: true
+                }
+
+            } );
+
+        </script>
+        <!-- Snowplow stops plowing -->
+        <!-- ---------------------------------------------------------- -->
+
+        <!-- CONTAINER - renderer.domElement will be appended here -->
+        <div id="scene-container"></div>
+
+        <!-- LOADING - until DOMContentLoaded -->
+        <div id="loadin">. . . L O A D I N G . . .</div>
+
+        <!-- INFO - appendix will be appended here -->
+        <div id="info"></div>
+
+        <!-- RANGE-INPUTS -->
+        <div id="ranges-area"><!-- ** -->
+            <div id="sync-range">
+                <input id="sync-from" type="range" min="0" max="100" value="0">
+                <input id="sync-to"   type="range" min="0" max="100" value="100">
+            </div>
+
+            <div id="async-range">
+                <div id="red-range">
+                    <input id="red-from"  type="range" min="0" max="100" value="0">
+                    <input id="red-to"    type="range" min="0" max="100" value="100">
+                </div>
+                <div id="blue-range">
+                    <input id="blue-from" type="range" min="0" max="100" value="0">
+                    <input id="blue-to"   type="range" min="0" max="100" value="100">
+                </div>
+            </div>
         </div>
-        <div id="blue-range">
-          <input id="blue-from" type="range" min="0" max="100" value="0">
-          <input id="blue-to"   type="range" min="0" max="100" value="100">
+
+        <!-- BUTTONS -->
+        <div id="screen-menu">
+            <button type="button" id="reset-button">RESET/R</button>
+            <br>
+            <button type="button" id="pause-button">PAUSE/Space</button>
+            <br>
+            <br>
+            <button type="button" id="kartesian">CARTESIAN</button>
+            <br>
+            <button type="button" id="cylindrical">CYLINDRICAL</button>
+            <br>
+            <button type="button" id="spherical">SPHERICAL</button>
+            <br>
+            <br>
+            <button type="button" id="syncronize">SYNC Draw</button>
+            <br>
+            <button type="button" id="desyncronize">ASYNC Draw</button>
+            <br>
+            <br>
+            <button type="button" id="fullScreen">FULLscreen</button>
+            <br>
+            <button type="button" id="grid">GRIDscreen</button>
+            <br>
         </div>
-      </div>
-    </div>
 
-    <div id="screen-menu">
-      <button type="button" id="reset-button">RESET/R</button>
-      <br>
-      <button type="button" id="pause-button">PAUSE/Space</button>
-      <br>
-      <br>
-      <button type="button" id="kartesian">CARTESIAN</button>
-      <br>
-      <button type="button" id="cylindrical">CYLINDRICAL</button>
-      <br>
-      <button type="button" id="spherical">SPHERICAL</button>
-      <br>
-      <br>
-      <button type="button" id="syncronize">SYNC Draw</button>
-      <br>
-      <button type="button" id="desyncronize">ASYNC Draw</button>
-      <br>
-      <br>
-      <button type="button" id="fullScreen">FULLscreen</button>
-      <br>
-      <button type="button" id="grid">GRIDscreen</button>
-      <br>
-    </div>
+        <!-- WebGL SHADERS -->
+        <!-- 1. Vertex shader -->
+        <script id="vShader" type="x-shader/x-vertex">
 
-    <script id="vShader" type="x-shader/x-vertex">
+            precision mediump float;
+            precision mediump int;
 
-      precision mediump float;
-      precision mediump int;
+            uniform mat4 modelViewMatrix;
+            uniform mat4 projectionMatrix;
 
-      uniform mat4 modelViewMatrix;
-      uniform mat4 projectionMatrix;
-
-      attribute vec3 position;
+            attribute vec3 position;
 
 
 #ifdef PICKING
-      attribute vec3 pic;
+            attribute vec3 pic;
 #else
-      attribute vec3 color;
+            attribute vec3 color;
 #endif
 
-      uniform float uK;
-      uniform float uC;
-      uniform float uS;
-      uniform float uSize;
+            uniform float uK;
+            uniform float uC;
+            uniform float uS;
+            uniform float uSize;
 
-      varying vec3 vColor;
+            varying vec3 vColor;
 
-      const float PI = 3.14159265358979323846264;
-      const float TAU = 2.0 * 3.14159265358979323846264;
+            const float PI = 3.14159265358979323846264;
+            const float TAU = 2.0 * 3.14159265358979323846264;
 
-      void main() {
+            void main() {
 
 #ifdef PICKING
-          vColor = pic;
+                vColor = pic;
 #else
-          vColor = color;
+                vColor = color;
 #endif
 
-          float k = uK;
-          float c = uC;
-          float s = uS;
-          float siz = uSize;
+                float k = uK;
+                float c = uC;
+                float s = uS;
+                float siz = uSize;
 
-          vec3 pos = vec3(position);
+                vec3 pos = vec3(position);
 
-          vec3 kpos = pos * vec3(2.0, 2.0, 2.0) - vec3(1.0, 1.0, 1.0);
+                vec3 kpos = pos * vec3(2.0, 2.0, 2.0) - vec3(1.0, 1.0, 1.0);
 
-          float cx = pos.y * cos(TAU * pos.x);
-          float cy = pos.y * sin(TAU * pos.x);
-          float cz = 2.0 * pos.z - 1.0;
-          vec3 cpos = vec3(cx, cy, cz);
+                float cx = pos.y * cos(TAU * pos.x);
+                float cy = pos.y * sin(TAU * pos.x);
+                float cz = 2.0 * pos.z - 1.0;
+                vec3 cpos = vec3(cx, cy, cz);
 
-          float sx = pos.z * cos(TAU * pos.x) * sin(PI * pos.y);
-          float sy = pos.z * sin(TAU * pos.x) * sin(PI * pos.y);
-          float sz = pos.z * cos(PI * pos.y);
-          vec3 spos = vec3(sx, sy, sz);
+                float sx = pos.z * cos(TAU * pos.x) * sin(PI * pos.y);
+                float sy = pos.z * sin(TAU * pos.x) * sin(PI * pos.y);
+                float sz = pos.z * cos(PI * pos.y);
+                vec3 spos = vec3(sx, sy, sz);
 
-          vec3 finpos = k * kpos + c * cpos + s * spos;
+                vec3 finpos = k * kpos + c * cpos + s * spos;
 
-          gl_PointSize = siz * 1.0;
-          gl_Position = projectionMatrix * modelViewMatrix * vec4(finpos, 1.0);
+                gl_PointSize = siz * 1.0;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(finpos, 1.0);
 
-      }
+            }
 
-    </script>
+        </script>
 
-    <script id="fShader" type="x-shader/x-fragment">
+        <!-- 2. Fragment Shader -->
+        <script id="fShader" type="x-shader/x-fragment">
 
-      precision mediump float;
-      precision mediump int;
+            precision mediump float;
+            precision mediump int;
 
-      varying vec3 vColor;
+            varying vec3 vColor;
 
-      void main() {
+            void main() {
 
-          vec3 color = vec3(vColor);
+                vec3 color = vec3(vColor);
 
-          gl_FragColor = vec4(color, 0.85);
-      }
+                gl_FragColor = vec4(color, 0.85);
+            }
 
-    </script>
+        </script>
 
-    <!-- <script src="js/appn.js"></script>  -->
-    <script src="js/appdemo.js"></script> <!-- *** -->
-    <script id="main" type="text/javascript">
+        <!-- JSR -->
+        <script src="js/jsr.js"></script>
 
-        myfun(["/nausten", "/nwhit"], 1.0, 0.1);
+        <!-- MAIN -->
+        <script id="main" type="module">
 
-    </script>
+            import { myfun } from './js/appdemo.js';
 
-  </body>
+            myfun(["/nausten", "/nwhit"], 1.0, 0.1);
+
+        </script>
+
+    </body>
 
 </html>

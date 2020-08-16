@@ -10,16 +10,15 @@ import Stats from "https://cdn.jsdelivr.net/npm/three@0.118.3/examples/jsm/libs/
 // fun
 const myfun = (urlarr, siz, ad) => {
 
-    let data = [];
-    let results = [];
-    let meta;
-    let num;
+    let data = [], results = [];
+    let meta, num, recs = [];
+    const numRECS = 3;
+    const invokeURL = '{API}';
 
     let container, renderer, scene;
     let picData = [], picScene, picRT, mouse;
-    let cameraA;
-    let camerasB = [];
-    let controlsA, controlsB, stats, ptStats;
+    let cameraA, camerasB = [];
+    let controlsA, controlsB, stats, ptStats, appendx;
     let pointsOnScreen = 0;
 
     let geometries = [], picGeometries = [];
@@ -31,14 +30,14 @@ const myfun = (urlarr, siz, ad) => {
     let rId = 0, rData, picPrint = "-";
 
     let timer = 0;
-    const duration = 360;
+    const duration = 36;
     const coordinateSystems = [ "Cartesian", "Cylindrical", "Spherical" ];
     let currCoordSys = 0; // 0:Kartesian, 1:Cylindrical, 2:Spherical
     let prevCoordSys = 0;
     let coordSys = [ 1.0, 0.0, 0.0 ];
     const SIZE = siz;
 
-    let nMaxs = [ 0, 0 ];  //**
+    let nMaxs = [ 0, 0 ];       //**
     let syncFrom = [ 0, 0 ];    //**
     let syncTo = [ 100, 100 ];  //**
     let asyncFrom = [ 0, 0 ];   //**
@@ -71,43 +70,217 @@ const myfun = (urlarr, siz, ad) => {
     const buttonRESET = document.querySelector( '#reset-button' );
     const buttonPAUSE = document.querySelector( '#pause-button' );
 
+    // // TRACKING init start
+    var trackPauseWay = '';
+    var trackResetWay = '';
+
+    // Structured Events - se_category: Interaction
+    //  1. Coordinate System (kartesian, cylindrical, spherical)
+    //  2. Draw Range Style (sync, async)
+    //  3. Screen Layout (full, grid)
+
+    function trackCoordSys ( label, property, value ) {
+
+        window.snowp_in_fun( 'trackStructEvent',
+                             'Interaction',
+                             'Coordinate System',
+                             label,
+                             property,
+                             value );
+
+    }
+
+    function trackDrawRangeStyle ( label, property, value ) {
+
+        window.snowp_in_fun( 'trackStructEvent',
+                             'Interaction',
+                             'Draw Range Style',
+                             label,
+                             property,
+                             value );
+
+    }
+
+    function trackScreenLay ( label, property, value ) {
+
+        window.snowp_in_fun( 'trackStructEvent',
+                             'Interaction',
+                             'Screen Layout',
+                             label,
+                             property,
+                             value );
+
+    }
+
+    function argsContextGenerator ( args ) {
+
+        var argsContext = {
+            schema: 'iglu:test.adatzer.iglu/main_args/jsonschema/1-0-0',
+            data: {
+                point_size: siz,
+                additive_blending: ad,
+                num_clouds: urlarr.length
+            }
+        };
+
+        return argsContext;
+
+    }
+
+    function stateContextGenerator ( args ) {
+
+        var stateContext = {
+            schema: 'iglu:test.adatzer.iglu/kon_state/jsonschema/1-0-0',
+            data: {
+                FPS: parseInt( fps ),
+                points_on_screen: pointsOnScreen,
+                coord_system: coordinateSystems[ currCoordSys ],
+                screen_layout: flagFullScreen ? 'Full' : 'Grid',
+                draw_range_style: flagSync ? 'Sync' : 'Async',
+                sync_draw_range: {
+                    from: syncFrom,
+                    to: syncTo
+                },
+                async_draw_range: {
+                    from: asyncFrom,
+                    to: asyncTo
+                }
+            }
+        };
+
+        return stateContext;
+
+    }
+
+    function notPageViewEventFilter ( args ) {
+
+        return args[ 'eventType' ] !== 'pv';
+
+    }
+
+    function onlyPageViewEventFilter ( args ) {
+
+        return args[ 'eventType' ] === 'pv';
+
+    }
+
+    window.snowp_in_fun( 'addGlobalContexts',
+                         [
+                             [ notPageViewEventFilter, [ stateContextGenerator ] ],
+                             [ onlyPageViewEventFilter, [ argsContextGenerator ] ]
+                         ] );
+
+    window.snowp_in_fun( 'enableActivityTracking', 10, 10 );
+
+    window.snowp_in_fun('trackPageView',
+                        null,
+                        [{
+                            schema: 'iglu:test.adatzer.iglu/pv_webgl/jsonschema/1-0-0',
+                            data: {
+                                needsWebGL: true
+                            }
+                        },
+                         {
+                             schema: 'iglu:test.adatzer.iglu/br_webgl/jsonschema/1-0-0',
+                             data: {
+                                 isWebGLAvailable: isWebGLAvail(),
+                                 isWebGL2Available: isWebGL2Avail()
+                             }
+                         }]
+                       );
+
+    // helpers for detecting webgl support
+    function isWebGLAvail () {
+
+        try {
+
+            var canv = document.createElement( 'canvas' );
+
+            return !! ( window.WebGLRenderingContext && ( canv.getContext( 'webgl' ) || canv.getContext( 'experimental-webgl' ) ) );
+
+        } catch ( e ) {
+
+            return false;
+
+        }
+
+    }
+
+    function isWebGL2Avail () {
+
+        try {
+
+            var canv = document.createElement( 'canvas' );
+
+            return !! ( window.WebGL2RenderingContext && canv.getContext( 'webgl2' ) );
+
+        } catch ( e ) {
+
+            return false;
+
+        }
+
+    }
+
+    // // TRACKING init end
+
     // // Listener
     document.addEventListener( "DOMContentLoaded", function () {
-        doAjaxThings(urlarr);
+        doAjaxThings(urlarr, invokeURL);
     } );
 
     // // AJAX
-    async function doAjaxThings( urls ) {
+    async function doAjaxThings( urls, apiGate ) {
+
+        // get the coordinates
         let l = urls.length;
         for ( let u = 0; u < l; u++ ) {
+
             let result = await makeRequest( "GET", urls[u] );
             results.push( result );
+
         }
 
-        // // when data finishes loading
         let rl = results.length;
         for ( let r = 0; r < rl; r++ ) {
+
             let dat = JSON.parse( results[r] );
             data.push( dat );
+
         }
 
+        // get the recommendations
+        let requRecs = await makeRequest( "GET", apiGate );
+        recs = JSON.parse( requRecs );
+        recs = recs.slice( 0, numRECS);
+
+        // displays
         loadin.style.display = 'none';
         info.style.display = 'block';
         rangesArea.style.display = 'block';
         screenMenu.style.display = 'block';
 
+        // finally
         doIt();
+
     }
 
+
     function makeRequest( method, url ) {
+
         return new Promise(( resolve, reject ) => {
+
             const xhr = new XMLHttpRequest();
-            let byCache = ((/\?/).test(url) ? "&" : "?") + (new Date()).getTime();
+            // ...
+            //let byCache = ((/\?/).test(url) ? "&" : "?") + (new Date()).getTime();
+            let byCache = "";
             xhr.open( method, url + byCache, true );
             xhr.onload = () => resolve( xhr.response );
             xhr.onerror = () => reject( xhr.statusText );
             xhr.send();
+
         } );
+
     }
 
 
@@ -115,6 +288,7 @@ const myfun = (urlarr, siz, ad) => {
         init();
         play();
     }
+
 
     function init() {
 
@@ -155,36 +329,48 @@ const myfun = (urlarr, siz, ad) => {
 
     }
 
+
     function createCameras() {
+
         const fov = 35;
         const aspect = container.clientWidth / container.clientHeight;
         const near = 0.01;
         const far = 20;
 
-        cameraA = new THREE.PerspectiveCamera( fov, aspect, near, far ); // !!!
+        cameraA = new THREE.PerspectiveCamera( fov, aspect, near, far );
         cameraA.position.set( 0.5, 0.5, 5 );
 
         // // must num < 32 (three.js doc on layers) ***
         for ( let lay = 0; lay < num; lay++ ) {
+
             cameraA.layers.enable( lay );
+
         }
 
         for ( let c = 0; c < ( num + 1 ); c++ ) {
+
             let camera = new THREE.PerspectiveCamera( fov, aspect, near, far );
             camera.position.set( 0.5, 0.5, 5 );
             camerasB.push( camera );
+
         }
 
         for ( let lay = 0; lay < num; lay++ ) {
+
             camerasB[0].layers.enable( lay );
+
         }
 
     }
 
+
     function createControls() {
-        controlsA = new THREE.TrackballControls( cameraA, container );
-        controlsB = new THREE.TrackballControls( camerasB[0], container );
+
+        controlsA = new TrackballControls( cameraA, container );
+        controlsB = new TrackballControls( camerasB[0], container );
+
     }
+
 
     function createAndAddObjects() {
 
@@ -212,10 +398,10 @@ const myfun = (urlarr, siz, ad) => {
 
         // // geometries ...vertices in the range [0,1]
         for (let g = 0; g < num; g++ ) {
+
             let cloudSize = data[g].length;
 
             let positions = [];
-            // let sizes = [];
             let defColors = [];
             let picColors = [];
             let colorP = new THREE.Color();
@@ -224,12 +410,12 @@ const myfun = (urlarr, siz, ad) => {
             let colorV = new THREE.Vector3();
 
             for ( let i = 0; i < cloudSize; i++ ) {
-                vertex.x = data[g][i][0];
-                vertex.y = data[g][i][1];
-                vertex.z = data[g][i][2];
+
+                vertex.x = data[ g ][ i ][ 0 ];
+                vertex.y = data[ g ][ i ][ 1 ];
+                vertex.z = data[ g ][ i ][ 2 ];
 
                 positions.push( vertex.x, vertex.y, vertex.z );
-                // sizes.push( 1.0 );
 
                 colorV.setFromMatrixColumn( myMatrix, g );
                 defColors.push( colorV.x, colorV.y, colorV.z );
@@ -241,7 +427,9 @@ const myfun = (urlarr, siz, ad) => {
                     localIndex: i,
                 };
                 ip++;
+
             }
+
             let geometry = new THREE.BufferGeometry();
 
             // // the typed BufferAttributes like Float32BufferAttribute are
@@ -254,9 +442,6 @@ const myfun = (urlarr, siz, ad) => {
             let colorParamAttr = new THREE.Float32BufferAttribute( defColors, 3 );
             geometry.setAttribute( 'color', colorParamAttr );
 
-            // let sizeAttr = new THREE.Float32BufferAttribute( sizes, 1 );
-            // geometry.setAttribute( 'size', sizeAttr );
-
             let pColor = new THREE.Float32BufferAttribute( picColors, 3 );
             geometry.setAttribute( 'pic', pColor );
 
@@ -264,6 +449,7 @@ const myfun = (urlarr, siz, ad) => {
 
             let pGeometry = geometry.clone();
             picGeometries.push( pGeometry );
+
         }
 
         // // material
@@ -272,9 +458,9 @@ const myfun = (urlarr, siz, ad) => {
 
         myMaterial = new THREE.RawShaderMaterial( {
             uniforms: {
-                uK: { value: coordSys[0] },
-                uC: { value: coordSys[1] },
-                uS: { value: coordSys[2] },
+                uK: { value: coordSys[ 0 ] },
+                uC: { value: coordSys[ 1 ] },
+                uS: { value: coordSys[ 2 ] },
                 uSize: { value: siz },
             },
             vertexShader: vert,
@@ -282,14 +468,13 @@ const myfun = (urlarr, siz, ad) => {
             blending: THREE.AdditiveBlending,
             depthWrite: false,
             depthTest: false,
-            // alphaTest: 0.5,
         } );
 
         myPicMaterial = new THREE.RawShaderMaterial( {
             uniforms: {
-                uK: { value: coordSys[0] },
-                uC: { value: coordSys[1] },
-                uS: { value: coordSys[2] },
+                uK: { value: coordSys[ 0 ] },
+                uC: { value: coordSys[ 1 ] },
+                uS: { value: coordSys[ 2 ] },
                 uSize: { value: siz },
             },
             vertexShader: "#define PICKING\n" + vert,
@@ -297,39 +482,40 @@ const myfun = (urlarr, siz, ad) => {
             blending: THREE.NoBlending,
             depthWrite: false,
             depthTest: false,
-            // alphaTest: 0.5,
         } );
 
         // // particles
         for ( let p = 0; p < num; p++ ) {
-            particles.push( new THREE.Points( geometries[p], myMaterial ) );
+
+            particles.push( new THREE.Points( geometries[ p ], myMaterial ) );
             particles[p].layers.set( p );
             particles[p].frustumCulled = false;
-            cloud.add( particles[p] );
+            cloud.add( particles[ p ] );
 
-            picParticles.push( new THREE.Points( geometries[p], myPicMaterial ) );
+            picParticles.push( new THREE.Points( geometries[ p ], myPicMaterial ) );
             picParticles[p].layers.set( p );
             picParticles[p].frustumCulled = false;
-            picCloud.add( picParticles[p] );
+            picCloud.add( picParticles[ p ] );
 
-            nMaxs[p] = particles[p].geometry.attributes.position.count;
+            nMaxs[ p ] = particles[ p ].geometry.attributes.position.count;
+
         }
 
         // // Box helper
-        let boxG = new THREE.BoxBufferGeometry( 2, 2, 2 );
-        let edges = new THREE.EdgesGeometry( boxG );
-        let line = new THREE.LineSegments( edges );
-        line.material.depthTest = false;
-        line.material.opacity = 0.25;
-        line.material.transparent = true;
-        line.material.color = new THREE.Color( 'grey' );
-        line.layers.enableAll();
-        cloud.add( line );
+        // let boxG = new THREE.BoxBufferGeometry( 2, 2, 2 );
+        // let edges = new THREE.EdgesGeometry( boxG );
+        // let line = new THREE.LineSegments( edges );
+        // line.material.depthTest = false;
+        // line.material.opacity = 0.25;
+        // line.material.transparent = true;
+        // line.material.color = new THREE.Color( 'grey' );
+        // line.layers.enableAll();
+        // cloud.add( line );
 
         // // axes helper
-        let axesHelperA = new THREE.AxesHelper( 100 );
-        axesHelperA.layers.enableAll();
-        cloud.add( axesHelperA );
+        // let axesHelperA = new THREE.AxesHelper( 100 );
+        // axesHelperA.layers.enableAll();
+        // cloud.add( axesHelperA );
 
         initCloudQuaternion = new THREE.Quaternion();
         initCloudQuaternion.copy( cloud.quaternion );
@@ -337,12 +523,12 @@ const myfun = (urlarr, siz, ad) => {
         scene.add( cloud );
         picScene.add( picCloud );
 
-
-
     }
+
 
     function createRenderer() {
 
+        // // in r118, WebGlRenderer creates WebGL2 (falls back to 1, if necessary)
         renderer = new THREE.WebGLRenderer( {
             antialias: false,
             // premultipliedAlpha: false,  // false is the default already...
@@ -354,15 +540,19 @@ const myfun = (urlarr, siz, ad) => {
         renderer.setClearColor( 0 );
         renderer.autoClear = false;
 
-        renderer.gammaFactor = 2.2;
-        renderer.gammaOutput = true;
+        // renderer.gammaFactor = 2.2;
+        // renderer.gammaOutput = true; // deprecated
 
         container.appendChild ( renderer.domElement );
 
         renderer.domElement.addEventListener( 'mousemove', onMouseMove );
+
     }
 
+
+    // RenderTarget
     function createRT() {
+
         let options = {
             format: THREE.RGBAFormat,
             type: THREE.UnsignedByteType,
@@ -375,14 +565,20 @@ const myfun = (urlarr, siz, ad) => {
 
         picRT = new THREE.WebGLRenderTarget( 1, 1, options );
         picRT.texture.generateMipmaps = false;
+
     }
+
 
     function onMouseMove( e ) {
+
         mouse.x = e.clientX;
         mouse.y = e.clientY;
+
     }
 
+
     function play() {
+
         flagPause = true;
         renderer.setAnimationLoop( () => {
 
@@ -390,56 +586,84 @@ const myfun = (urlarr, siz, ad) => {
             render();
             stats.update();
             ptStats.update();
+
+            var now = Date.now();
+            if ( now >= prevTime + 1000 ) {
+
+                fps = ( frames * 1000 ) / ( now - prevTime );
+                prevTime = now;
+                frames = 0;
+
+            }
+
         } );
 
     }
 
+
     function update() {
-        // perform updates to the scene, called once per frame (AVOID)
+        // performs updates to the scene, called once per frame (AVOID)
 
         if ( timer <= 1 ) {
+
             coordSys = [ 0.0, 0.0, 0.0 ];
             coordSys[prevCoordSys] = 0.0;
             coordSys[currCoordSys] = 1.0;
             timer = 0;
+
         } else {
+
             coordSys = [ 0.0, 0.0, 0.0 ];
             coordSys[prevCoordSys] = timer / duration;
             coordSys[currCoordSys] = ( duration - timer ) / duration;
             timer -= 1;
+
         }
-        myMaterial.uniforms.uK.value = coordSys[0];
-        myMaterial.uniforms.uC.value = coordSys[1];
-        myMaterial.uniforms.uS.value = coordSys[2];
-        myPicMaterial.uniforms.uK.value = coordSys[0];
-        myPicMaterial.uniforms.uC.value = coordSys[1];
-        myPicMaterial.uniforms.uS.value = coordSys[2];
+
+        myMaterial.uniforms.uK.value = coordSys[ 0 ];
+        myMaterial.uniforms.uC.value = coordSys[ 1 ];
+        myMaterial.uniforms.uS.value = coordSys[ 2 ];
+        myPicMaterial.uniforms.uK.value = coordSys[ 0 ];
+        myPicMaterial.uniforms.uC.value = coordSys[ 1 ];
+        myPicMaterial.uniforms.uS.value = coordSys[ 2 ];
 
         if ( flagSync ) {
+
             currFrom = syncFrom;
             currTo = syncTo;
+
         }
         if ( flagAsync ) {
+
             currFrom = asyncFrom;
             currTo = asyncTo;
+
         }
         for ( let i = 0; i < particles.length; i++ ) {
+
             start = Math.round(nMaxs[i] * currFrom[i] / 100);
             count = Math.round(nMaxs[i] * (currTo[i] - currFrom[i]) / 100);
             particles[i].geometry.setDrawRange( start, count );
             picParticles[i].geometry.setDrawRange( start, count );
+
         }
 
         cloud.rotation.y -= dRotCloud;
         picCloud.quaternion.copy( cloud.quaternion );
 
         if ( controlsA.enabled ) {
+
             controlsA.update();
+
         }
         if ( controlsB.enabled ) {
+
             controlsB.update();
+
         }
+
     }
+
 
     function render() {
 
@@ -447,25 +671,21 @@ const myfun = (urlarr, siz, ad) => {
         pointsOnScreen = 0;
 
         if ( flagFullScreen ) {
+
             if ( flagPic ) {
+
                 pick();
+
             }
             renderer.setViewport( 0,0,container.clientWidth,container.clientHeight);
             renderer.render( scene, cameraA );
             pointsOnScreen += renderer.info.render.points;
+
         }
 
         if ( flagGrid ) {
 
-            // if ( num === 1 ) {
-            //     sliX = container.clientWidth;
-            //     sliY = container.clientHeight;
-
-            //     renderer.setViewport( 0, 0, sliX, sliY );
-            //     renderer.render( scene, camerasB[0] );
-            // }
-
-            // if ( num === 2 ) {
+            // since num === 2
             let sliX = container.clientWidth / 2;
             let sliY = container.clientHeight / 2;
 
@@ -474,29 +694,27 @@ const myfun = (urlarr, siz, ad) => {
             pointsOnScreen += renderer.info.render.points;
 
             renderer.setViewport( 0, sliY, sliX, sliY );
-            camerasB[1].position.copy( camerasB[0].position );
-            camerasB[1].quaternion.copy( camerasB[0].quaternion );
-            camerasB[1].layers.enable( 0 );
-            camerasB[1].layers.disable( 1 );
-            renderer.render( scene, camerasB[1] );
+            camerasB[ 1 ].position.copy( camerasB[ 0 ].position );
+            camerasB[ 1 ].quaternion.copy( camerasB[ 0 ].quaternion );
+            camerasB[ 1 ].layers.enable( 0 );
+            camerasB[ 1 ].layers.disable( 1 );
+            renderer.render( scene, camerasB[ 1 ] );
             pointsOnScreen += renderer.info.render.points;
 
             renderer.setViewport( sliX, sliY, sliX, sliY );
-            camerasB[2].position.copy( camerasB[0].position );
-            camerasB[2].quaternion.copy( camerasB[0].quaternion );
-            camerasB[2].layers.enable( 1 );
-            camerasB[2].layers.disable( 0 );
-            renderer.render( scene, camerasB[2] );
+            camerasB[ 2 ].position.copy( camerasB[ 0 ].position );
+            camerasB[ 2 ].quaternion.copy( camerasB[ 0 ].quaternion );
+            camerasB[ 2 ].layers.enable( 1 );
+            camerasB[ 2 ].layers.disable( 0 );
+            renderer.render( scene, camerasB[ 2 ] );
             pointsOnScreen += renderer.info.render.points;
-            // }
 
-            // if ( num == 3 ) {}
-            // if ( num == 4 ) {}
-            // if ( num == 5 ) {}
         }
 
     }
 
+
+    // GPU picking
     function pick() {
 
         // // render the picScene off-screen
@@ -534,106 +752,180 @@ const myfun = (urlarr, siz, ad) => {
             ( pixelBuffer[ 0 ] << 16 ) |
             ( pixelBuffer[ 1 ] << 8 ) |
             ( pixelBuffer[ 2 ] );
-        console.log( "after", rId );
 
         if ( rId == 0 ) {              // (rId == 0)
+
             picPrint = "-";
+
         } else {                       // (rId > 0)
+
             rData = picData[ rId ];
             if ( rData ) {
+
                 picPrint = rData.belongs + " " + rData.localIndex;
+
             }
+
         }
 
         renderer.setRenderTarget( null );
+
     }
 
+
     function initStats() {
+
         stats = new Stats();
         stats.showPanel( 0 );
         stats.dom.style.position = 'absolute';
         stats.dom.style.top = '0px';
         stats.dom.style.left = '0px';
         container.appendChild( stats.dom );
+
     }
 
+
     function initAppendix() {
+
         appendx = new ADAx.Appendix();
         appendx.domElement.style.position = 'absolute';
         appendx.domElement.style.bottom = '1px';
         appendx.domElement.style.left = '1px';
         info.appendChild( appendx.domElement );
+
     }
 
+
     function initPointStats() {
+
         ptStats = new ADAx.PointStats();
         ptStats.domElement.style.position = 'absolute';
         ptStats.domElement.style.top = '1px';
         container.appendChild( ptStats.domElement );
+
     }
+
 
     function addListeners() {
 
+        // // resize
         window.addEventListener( 'resize', onWindowResize, false );
 
+        // // keys
         document.addEventListener( 'keyup', onKeyUp, false);
         document.addEventListener( 'keydown', onKeyDown, false );
 
+        // // screen buttons
         buttonFS.addEventListener( 'click', function () {
+
+            trackScreenLay( "Full", null, null );
+
             flagFullScreen = true;
             flagGrid = false;
             controlsA.enabled = true;
             controlsB.enabled = false;
+
         }, false );
+
         buttonGS.addEventListener( 'click', function () {
+
+            trackScreenLay( "Grid", null, null );
+
             flagFullScreen = false;
             flagGrid = true;
             controlsA.enabled = false;
             controlsB.enabled = true;
+
         }, false );
 
+        // // coords buttons
         buttonKAR.addEventListener( 'click', toKartesian, false );
         buttonCYL.addEventListener( 'click', toCylindrical, false );
         buttonSPH.addEventListener( 'click', toSpherical, false );
 
+        // draw buttons
         buttonSYNC.addEventListener( 'click', function () {
+
+            trackDrawRangeStyle( "Sync", null, null );
+
             flagSync = true;
             flagAsync = false;
             syncRangeArea.style.display = 'block';
             asyncRangeArea.style.display = 'none';
+
         }, false );
+
         buttonASYNC.addEventListener( 'click', function () {
+
+            trackDrawRangeStyle( "Async", null, null );
+
             flagSync = false;
             flagAsync = true;
             syncRangeArea.style.display = 'none';
             asyncRangeArea.style.display = 'block';
+
         }, false );
 
-        buttonRESET.addEventListener( 'click', reset, false );
-        buttonPAUSE.addEventListener( 'click', pause, false );
+        // reset, pause buttons
+        buttonRESET.addEventListener( 'click', function () {
+
+            trackResetWay = "byButton";
+            reset();
+
+        }, false );
+
+        buttonPAUSE.addEventListener( 'click', function () {
+
+            trackPauseWay = "byButton";
+            pause();
+
+        }, false );
+
     }
 
+
     function toKartesian() {
+
+        trackCoordSys( "Kartesian", null, timer );
+
         if ( ( currCoordSys !== 0 ) && ( timer === 0 ) ) {
+
             prevCoordSys = currCoordSys;
             timer = duration;
             currCoordSys = 0;
+
         }
+
     }
+
     function toCylindrical() {
+
+        trackCoordSys( "Cylindrical", null, timer );
+
         if ( ( currCoordSys !== 1 ) && ( timer === 0 ) ) {
+
             prevCoordSys = currCoordSys;
             timer = duration;
             currCoordSys = 1;
+
         }
+
     }
+
     function toSpherical() {
+
+        trackCoordSys( "Spherical", null, timer );
+
         if ( ( currCoordSys !==2 ) && ( timer === 0 ) ) {
+
             prevCoordSys = currCoordSys;
             timer = duration;
             currCoordSys = 2;
+
         }
+
     }
+
 
     function onWindowResize() {
         // // called upon every window resize (AVOID)
@@ -644,199 +936,274 @@ const myfun = (urlarr, siz, ad) => {
 
         // update other cameras ..keeping same aspect with cameraA
         for ( let c = 0; c < camerasB.length; c++ ) {
-            camerasB[c].aspect = container.clientWidth / container.clientHeight;
-            camerasB[c].updateProjectionMatrix();
+
+            camerasB[ c ].aspect = container.clientWidth / container.clientHeight;
+            camerasB[ c ].updateProjectionMatrix();
+
         }
 
         // update the size of the renderer AND of the canvas
         renderer.setSize( container.clientWidth, container.clientHeight );
         renderer.setPixelRatio( window.devicePixelRatio );
+
     }
 
+
     function onKeyUp(e) {
+
         let ec = e.code;
 
         if ( ec === 'Space' ) {
+
+            trackPauseWay = "byKey";
             pause();
+
         }
+
         if ( ec === 'KeyR' ) {
+
+            trackResetWay = "byKey";
             reset();
+
         }
-        if ( ec === 'KeyP' ) {
-            picIt();
-        }
+
+        // // for GPU picking...not enabled
+        // if ( ec === 'KeyP' ) {
+        //     picIt();
+        // }
+
     }
 
+
     function onKeyDown(e) {
+
         let ec = e.code;
 
         if ( flagFullScreen ) {
 
             if ( ec === 'Digit1' ) {
+
                 if ( e.shiftKey ) {
+
                     cameraA.layers.disable( 0 );
+
                 } else {
+
                     cameraA.layers.enable( 0 );
+
                 }
+
             }
+
             if ( ec === 'Digit2' ) {
+
                 if ( e.shiftKey ) {
+
                     cameraA.layers.disable( 1 );
+
                 } else {
+
                     cameraA.layers.enable( 1 );
+
                 }
+
             }
             if ( ec === 'Digit9' ) {
+
                 cameraA.layers.enableAll();
+
             }
 
         }
+
     }
 
+
     function reset() {
+
+        window.snowp_in_fun( 'trackStructEvent',
+                             'Interaction',
+                             'PR',
+                             'Reset',
+                             trackResetWay );
+
         cloud.quaternion.copy( initCloudQuaternion );
         controlsA.reset();
         controlsB.reset();
+
     }
 
+
     function pause() {
+
         if ( flagPause ) {
+
+            window.snowp_in_fun( 'trackStructEvent',
+                                 'Interaction',
+                                 'PR',
+                                 'Pause',
+                                 trackPauseWay );
+
             flagPause = false;
             dRotCloud = 0;
+
         } else {
+
+            window.snowp_in_fun( 'trackStructEvent',
+                                 'Interaction',
+                                 'PR',
+                                 'unPause',
+                                 trackPauseWay );
+
             flagPause = true;
             dRotCloud = dROT;
+
         }
+
     }
 
     function picIt() {
+
         if ( flagPic ) {
+
             flagPic = false;
             picScene.dispose();
             picRT.dispose();
             picPrint = "-";
+
         } else {
+
             flagPic = true;
+
         }
+
     }
 
     function stop() {
+
         if ( flagPause === true ) {
+
             flagPause = false;
             renderer.setAnimationLoop( null );
+
         } else {
+
             play();
+
         }
+
     }
 
     function initJSR() {
 
         if ( flagSync ) {
+
             syncRangeArea.style.display = 'block';
             asyncRangeArea.style.display = 'none';
-        }
-        if ( flagAsync ) {
-            syncRangeArea.style.display = 'none';
-            asyncRangeArea.style.display = 'block';
+
         }
 
+        if ( flagAsync ) {
+
+            syncRangeArea.style.display = 'none';
+            asyncRangeArea.style.display = 'block';
+
+        }
+
+        // SYNC range
         const syncRange = new JSR( ['#sync-from', '#sync-to'], {
+
             sliders: 2,
             values: [ syncFrom[0], syncTo[0] ],
             labels: {
                 minMax: false,
                 formatter: (value) => {
                     return value.toString() + '%';
-                },
-            },
-        } );
-        syncRange.addEventListener( 'update', (input, value) => {
-            if ( input.id == "sync-from" ) {
-                syncFrom[0] = value;
-                syncFrom[1] = value;
+                }
             }
-            if ( input.id == "sync-to" ) {
-                syncTo[0] = value;
-                syncTo[1] = value;
-            }
+
         } );
 
+        syncRange.addEventListener( 'update', (input, value) => {
+
+            if ( input.id == "sync-from" ) {
+
+                syncFrom[ 0 ] = value;
+                syncFrom[ 1 ] = value;
+
+            }
+
+            if ( input.id == "sync-to" ) {
+
+                syncTo[ 0 ] = value;
+                syncTo[ 1 ] = value;
+
+            }
+
+        } );
+
+        // RED range
         const redRange = new JSR( ['#red-from', '#red-to'], {
+
             sliders: 2,
             values: [ asyncFrom[0], asyncTo[0] ],
             labels: {
                 minMax: false,
                 formatter: (value) => {
                     return value.toString() + '%';
-                },
-            },
-        } );
-        redRange.addEventListener( 'update', (input, value) => {
-            if ( input.id == "red-from" ) {
-                asyncFrom[0] = value;
+                }
             }
-            if ( input.id == "red-to" ) {
-                asyncTo[0] = value;
-            }
+
         } );
 
+        redRange.addEventListener( 'update', (input, value) => {
+
+            if ( input.id == "red-from" ) {
+
+                asyncFrom[ 0 ] = value;
+
+            }
+            if ( input.id == "red-to" ) {
+
+                asyncTo[ 0 ] = value;
+
+            }
+
+        } );
+
+        // BLUE range
         const blueRange = new JSR( ['#blue-from', '#blue-to'], {
+
             sliders: 2,
             values: [ asyncFrom[1], asyncTo[1] ],
             labels: {
                 minMax: false,
                 formatter: (value) => {
                     return value.toString() + '%';
-                },
-            },
+                }
+            }
+
         } );
+
         blueRange.addEventListener( 'update', (input, value) => {
+
             if ( input.id == "blue-from" ) {
-                asyncFrom[1] = value;
+
+                asyncFrom[ 1 ] = value;
+
             }
+
             if ( input.id == "blue-to" ) {
-                asyncTo[1] = value;
+
+                asyncTo[ 1 ] = value;
+
             }
+
         } );
+
     }
 
-    let ADAx = ADAx || {};
-
-    ADAx.Appendix = function() {
-
-        let appendixContainer = document.createElement( 'div' );
-        appendixContainer.style.cssText = 'width:auto;opacity:0.7;cursor:default';
-
-        let apxDiv = document.createElement( 'div' );
-        apxDiv.style.cssText = 'padding:0 0 0 0;text-align:left;background:transparent;';
-        appendixContainer.appendChild( apxDiv );
-
-        let apxTextA = document.createElement( 'div' );
-        apxTextA.style.cssText = 'color:#f00;font-family:monospace,sans-serif;font-size:1vmin;font-weight:bold;line-height:1.1vmin';
-        apxTextA.innerHTML = '';
-        apxDiv.appendChild( apxTextA );
-
-        let apxTextsA = [];
-        let nLines = 7;  //**
-        for( let i = 0; i < nLines; i++ ){
-	    apxTextsA[i] = document.createElement( 'div' );
-	    apxTextsA[i].style.cssText = 'color:#006699;background:transparent;font-family:sans-serif;font-size:1.2vmin;font-weight:normal;line-height:1.3vmin;white-space:nowrap;';
-	    apxDiv.appendChild( apxTextsA[i] );
-	    apxTextsA[i].innerHTML = '-';
-        }
-        let i = 0;
-        apxTextsA[i++].textContent = "====== Controls ======";
-        apxTextsA[i++].textContent = "A + LeftMouse: Orbiting";
-        apxTextsA[i++].textContent = "S + LeftMouse: Zooming";
-        apxTextsA[i++].textContent = "D + LeftMouse: Panning";
-        apxTextsA[i++].textContent = "=== FullScreen ONLY ======";
-        apxTextsA[i++].textContent = "Shift + 1 / 1: Hide/Show Red";
-        apxTextsA[i++].textContent = "Shift + 2 / 2: Hide/Show Blue";
-
-        return {
-	    domElement: appendixContainer,
-	};
-    };
+    let ADAx = {};
 
     ADAx.PointStats = function() {
 
@@ -847,31 +1214,102 @@ const myfun = (urlarr, siz, ad) => {
         psDiv.style.cssText = 'text-align:center;';
         pointStatsContainer.appendChild( psDiv );
 
-        let psTexts	= [];
+        let psTexts = [];
         let nLines = 2;
+
         for ( let i = 0; i < nLines; i++ ) {
-	    psTexts[i] = document.createElement( 'div' );
-	    psTexts[i].style.cssText = 'color:#0099ff;background:transparent;font-family:monospace;font-size:9px;font-weight:bold;line-height:15px';
-	    psDiv.appendChild( psTexts[i] );
-	    psTexts[i].innerHTML= '-';
+
+	    psTexts[ i ] = document.createElement( 'div' );
+	    psTexts[ i ].style.cssText = 'color:#00dddd;background:transparent;font-family:monospace;font-size:9px;font-weight:bold;line-height:15px';
+	    psDiv.appendChild( psTexts[ i ] );
+	    psTexts[ i ].innerHTML= '-';
+
         }
 
-
         let lastTime = Date.now();
+
         return {
+
 	    domElement: pointStatsContainer,
 
 	    update: function() {
 
 	        // refresh only 30time per second
-	        if ( Date.now() - lastTime < 1000/30 ) return;
+	        if ( Date.now() - lastTime < 1000/30 ) {
+                    return;
+                }
+
 	        lastTime = Date.now();
 
-	        let i = 0;
-	        psTexts[i++].textContent = "Points: " + pointsOnScreen;
-                psTexts[i++].textContent = picPrint;
+	        let line = 0;
+	        psTexts[ line++ ].textContent = "Points: " + pointsOnScreen;
+                psTexts[ line++ ].textContent = picPrint;
+
 	    }
+
         };
+
+    };
+
+
+    ADAx.Appendix = function() {
+
+        let appendixContainer = document.createElement( 'div' );
+        appendixContainer.style.cssText = 'width:auto;opacity:0.7;cursor:default';
+
+        let apxDiv = document.createElement( 'div' );
+        apxDiv.style.cssText = 'padding:0 0 0 0;text-align:left;background:transparent;';
+        appendixContainer.appendChild( apxDiv );
+
+        // let apxTextA = document.createElement( 'div' );
+        // apxTextA.style.cssText = 'color:#f00;font-family:monospace,sans-serif;font-size:1vmin;font-weight:bold;line-height:1.1vmin';
+        // apxTextA.innerHTML = '';
+        // apxDiv.appendChild( apxTextA );
+
+        let apxTextsA = [];
+        let nLines = 9;  //**
+        for( let i = 0; i < nLines; i++ ){
+
+	    apxTextsA[ i ] = document.createElement( 'div' );
+	    apxTextsA[ i ].style.cssText = 'color:#00dddd;background:transparent;font-family:sans-serif;font-size:1.2vmin;font-weight:normal;line-height:1.3vmin;white-space:nowrap;';
+	    apxDiv.appendChild( apxTextsA[ i ] );
+	    apxTextsA[ i ].innerHTML = '-';
+
+        }
+
+        let i = 0;
+        apxTextsA[ i++ ].textContent = "====== Controls ======";
+        apxTextsA[ i++ ].textContent = "A + LeftMouse: Orbiting";
+        apxTextsA[ i++ ].textContent = "S + LeftMouse: Zooming";
+        apxTextsA[ i++ ].textContent = "D + LeftMouse: Panning";
+        apxTextsA[ i++ ].textContent = "=== FullScreen ONLY ======";
+        apxTextsA[ i++ ].textContent = "Shift + 1 / 1: Hide/Show Red";
+        apxTextsA[ i++ ].textContent = "Shift + 2 / 2: Hide/Show Blue";
+        apxTextsA[ i++ ].textContent = "";
+        apxTextsA[ i++ ].textContent = "======= RECOMMENDATIONS =======";
+
+        // ---------------
+        // RECOMMENDATIONS
+        // ---------------
+        let recDivs = [];
+        let recLinks = [];
+        for( let r = 0; r < numRECS; r++ ){
+
+            recDivs[ r ] = document.createElement( 'div' );
+	    recLinks[ r ] = document.createElement( 'a' );
+
+	    apxDiv.appendChild( recDivs[ r ] );
+            recDivs[ r ].appendChild( recLinks[ r ] );
+
+            recLinks[ r ].innerHTML = recs[ r ][ "rec_title" ];
+	    recLinks[ r ].setAttribute( 'title', recs[ r ][ "rec_title" ] );
+            recLinks[ r ].setAttribute( 'href', recs[ r ][ "rec_path" ] );
+            recLinks[ r ].style.cssText = 'color:#9965eb;font-family:sans-serif;font-size:1.6vmin;font-weight:bold;line-height:1.7vmin;white-space:nowrap;';
+
+        }
+
+        return { domElement: appendixContainer };
+
     };
 
 };

@@ -1,27 +1,56 @@
-
 body {
-    margin: 0;
     overflow: auto
-    color: black;
     text-align: center;
+    background-color: #374250;
 }
 
 h1 {
-    position: absolute;
-    width: 100%;
-    z-index: 1;
-    font-size: 1.5rem;
+    text-align: center;
+    margin: 3vmin;
+    padding: 3vmin;
+    font-size: 3.5rem;
+    color: #dddddd;
+}
+
+h2 {
+    margin: 5vmin;
+    font-size: 2.0rem;
+    color: #ffffff;
 }
 
 p {
-    width: 100%;
-    font-size: 1.5rem
+    margin: 3vmin;
+    font-size: 1.5rem;
+    color: #ffffff;
 }
 
-a:link{
-    color: #990000;
+ul {
+    margin: 3vmin;
+    font-size: 1.5rem;
+    color: #ffffff;
+}
+
+a:link {
+    color: #00cccc;
     text-decoration: none;
 }
-a:hover{
+a:hover {
     text-decoration: underline;
+}
+a:visited{
+    color: #9965eb;
+}
+
+label {
+    margin: 3vmin;
+    width: 90px;
+    font-size: 1.5rem;
+    color: #28d1b1;
+}
+
+button {
+    cursor: pointer;
+}
+button:hover {
+    background-color: #6638b8;
 }
